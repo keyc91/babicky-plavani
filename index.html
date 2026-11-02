@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0B4F63">
+<title>Babičky plavání</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🏊%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.json">
+<style>
+  :root {
+    --ink: #0B3C49;
+    --water: #E3F3F6;
+    --paper: #FFFFFF;
+    --line: #B9DCE3;
+    --swim: #0B7A99;
+    --deep: #0B4F63;
+    --muted: #4C6F79;
+    --danger: #A3321F;
+    box-sizing: border-box;
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--water); color: var(--ink);
+    font-family: "Atkinson Hyperlegible", "Segoe UI", Roboto, Arial, sans-serif;
+    font-size: 20px; line-height: 1.35;
+  }
+  main { max-width: 520px; margin: 0 auto; padding: 14px 14px 40px; }
+  [hidden] { display: none !important; }
+  button { font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .tabs button {
+    height: 54px; border-radius: 16px; border: 2px solid var(--deep);
+    background: var(--paper); color: var(--deep); font-size: 1.2rem; font-weight: 700;
+  }
+  .tabs button[aria-selected="true"] { background: var(--deep); color: #fff; }
+
+  .summary { background: var(--deep); color: #fff; border-radius: 24px; padding: 20px 22px 18px; }
+  .summary .month { font-size: 1.1rem; opacity: .85; margin: 0 0 4px; }
+  .summary .count { display: flex; align-items: baseline; gap: 12px; margin: 0; }
+  .summary .num { font-size: 4.6rem; font-weight: 700; line-height: 1; }
+  .summary .unit { font-size: 1.5rem; }
+  .summary .dist { margin: 8px 0 0; font-size: 1.3rem; min-height: 1.4em; }
+
+  .nav { display: flex; align-items: center; justify-content: space-between; margin: 16px 0 10px; }
+  .nav h1 { font-size: 1.6rem; margin: 0; text-align: center; flex: 1; }
+  .nav button {
+    width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--swim);
+    background: var(--paper); color: var(--swim); font-size: 2rem; font-weight: 700; line-height: 1;
+  }
+  .nav button:disabled { opacity: .3; cursor: default; }
+
+  .weekdays, .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .weekdays span { text-align: center; font-size: .95rem; color: var(--muted); padding-bottom: 4px; }
+  .day {
+    aspect-ratio: 1; min-height: 46px; border-radius: 14px; border: 2px solid var(--line);
+    background: var(--paper); color: var(--ink); font-size: 1.3rem; font-weight: 700;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0;
+  }
+  .day .sub { font-size: .8rem; font-weight: 400; line-height: 1; height: .85rem; margin-top: 2px; }
+  .day.swam { background: var(--swim); border-color: var(--swim); color: #fff; }
+  .day.today { outline: 3px solid var(--ink); outline-offset: 2px; }
+  .day.future { opacity: .35; cursor: default; }
+  .blank { visibility: hidden; }
+  .hint { margin: 14px 4px 0; color: var(--muted); font-size: 1rem; }
+
+  h2.sec { font-size: 1.5rem; margin: 4px 0 10px; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .seg button {
+    height: 46px; border-radius: 12px; border: 2px solid var(--swim);
+    background: var(--paper); color: var(--swim); font-size: 1.05rem; font-weight: 700;
+  }
+  .seg button[aria-pressed="true"] { background: var(--swim); color: #fff; }
+  .chart { background: var(--paper); border: 2px solid var(--line); border-radius: 18px; padding: 12px 8px 6px; }
+  .chart .cap { margin: 0 8px 4px; color: var(--muted); font-size: 1rem; }
+  .chart svg { display: block; width: 100%; height: auto; }
+  .chart text { font-family: inherit; }
+
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+  .stat { background: var(--paper); border: 2px solid var(--line); border-radius: 16px; padding: 12px 14px; }
+  .stat .l { font-size: 1rem; color: var(--muted); margin: 0 0 2px; }
+  .stat .v { font-size: 1.6rem; font-weight: 700; margin: 0; line-height: 1.15; }
+  .stat .s { font-size: .95rem; color: var(--muted); margin: 2px 0 0; }
+  .empty { margin: 16px 4px; color: var(--muted); }
+
+  .sheet-back {
+    position: fixed; inset: 0; background: rgba(11, 60, 73, .55);
+    display: flex; align-items: flex-end; justify-content: center; z-index: 10;
+  }
+  .sheet {
+    width: 100%; max-width: 520px; background: var(--paper); border-radius: 24px 24px 0 0;
+    padding: 20px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+  }
+  .sheet h2 { font-size: 1.5rem; margin: 0 0 12px; }
+  .sheet label { display: block; font-size: 1.1rem; margin-bottom: 8px; }
+  .sheet .row { display: flex; align-items: center; gap: 10px; }
+  .sheet input {
+    width: 150px; font: inherit; font-size: 1.6rem; padding: 8px 12px;
+    border: 2px solid var(--line); border-radius: 12px; color: var(--ink); background: #fff;
+  }
+  .sheet .unit { font-size: 1.4rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 16px; }
+  .chips button {
+    height: 46px; padding: 0 16px; border-radius: 23px; border: 2px solid var(--swim);
+    background: var(--water); color: var(--deep); font-size: 1.1rem; font-weight: 700;
+  }
+  .sheet .act { display: block; width: 100%; height: 56px; border-radius: 16px; font-size: 1.25rem; font-weight: 700; margin-top: 8px; }
+  .act.primary { background: var(--swim); border: 2px solid var(--swim); color: #fff; }
+  .act.plain { background: var(--paper); border: 2px solid var(--line); color: var(--ink); }
+  .act.danger { background: var(--paper); border: 2px solid var(--danger); color: var(--danger); }
+</style>
+</head>
+<body>
+<main>
+  <div class="tabs" role="tablist">
+    <button id="tabCal" role="tab" aria-selected="true">Kalendář</button>
+    <button id="tabStats" role="tab" aria-selected="false">Přehled</button>
+  </div>
+
+  <section id="viewCal">
+    <div class="summary" aria-live="polite">
+      <p class="month" id="sumMonth"></p>
+      <p class="count"><span class="num" id="sumNum">0</span><span class="unit" id="sumUnit">dnů plavání</span></p>
+      <p class="dist" id="sumDist"></p>
+    </div>
+    <div class="nav">
+      <button id="prev" aria-label="Předchozí měsíc">‹</button>
+      <h1 id="title"></h1>
+      <button id="next" aria-label="Další měsíc">›</button>
+    </div>
+    <div class="weekdays" aria-hidden="true">
+      <span>Po</span><span>Út</span><span>St</span><span>Čt</span><span>Pá</span><span>So</span><span>Ne</span>
+    </div>
+    <div class="grid" id="grid"></div>
+    <p class="hint">Klepni na den a zapiš, kolik jsi uplavala. Dny, kdy jsi plavala jsou modré.</p>
+  </section>
+
+  <section id="viewStats" hidden>
+    <h2 class="sec">Posledního půl roku</h2>
+    <div class="seg">
+      <button id="modeDist" aria-pressed="true">Vzdálenost</button>
+      <button id="modeDays" aria-pressed="false">Dny</button>
+    </div>
+    <div class="chart">
+      <p class="cap" id="chartCap"></p>
+      <div id="chartBox"></div>
+    </div>
+    <div id="statsBox"></div>
+  </section>
+</main>
+
+<div class="sheet-back" id="sheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <h2 id="sheetTitle"></h2>
+    <label for="sheetM">Kolik metrů jste uplavala? (nepovinné)</label>
+    <div class="row">
+      <input id="sheetM" type="number" inputmode="numeric" min="0" step="25" placeholder="např. 500">
+      <span class="unit">m</span>
+    </div>
+    <div class="chips" id="chips">
+      <button type="button" data-v="250">250</button>
+      <button type="button" data-v="500">500</button>
+      <button type="button" data-v="1000">1000</button>
+      <button type="button" data-v="1500">1500</button>
+    </div>
+    <button class="act primary" id="sheetSave" type="button">Uložit</button>
+    <button class="act danger" id="sheetDel" type="button">Smazat toto plavání</button>
+    <button class="act plain" id="sheetCancel" type="button">Zrušit</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  var MONTHS = ["leden","únor","březen","duben","květen","červen","červenec","srpen","září","říjen","listopad","prosinec"];
+  var GEN = ["ledna","února","března","dubna","května","června","července","srpna","září","října","listopadu","prosince"];
+  var SHORT = ["led","úno","bře","dub","kvě","čvn","čvc","srp","zář","říj","lis","pro"];
+  var KEY = "moje-plavani-v1";
+  var state = { days: {}, last: 0 };
+
+  function has(k) { return Object.prototype.hasOwnProperty.call(state.days, k); }
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return;
+      var p = JSON.parse(raw);
+      if (!p || typeof p !== "object") return;
+      var old = Number(p.meters) || 0;
+      var src = p.days || {};
+      for (var k in src) {
+        var v = src[k];
+        if (v === true) state.days[k] = old;
+        else if (typeof v === "number" && v >= 0) state.days[k] = v;
+      }
+      state.last = Number(p.last) || old || 0;
+    } catch (e) {}
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  var now = new Date();
+  var todayY = now.getFullYear(), todayM = now.getMonth(), todayD = now.getDate();
+  var viewY = todayY, viewM = todayM;
+  var chartMode = "dist";
+
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+  function keyOf(y, m, d) { return y + "-" + pad(m + 1) + "-" + pad(d); }
+  function parseKey(k) { return { y: +k.slice(0, 4), m: +k.slice(5, 7) - 1, d: +k.slice(8, 10) }; }
+  function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+  function dnu(n) { return n === 1 ? "den" : (n >= 2 && n <= 4 ? "dny" : "dnů"); }
+  function plural(n) { return dnu(n) + " plavání"; }
+  function dec(x) { return (Math.round(x * 10) / 10).toString().replace(".", ","); }
+  function fmtDist(m) { return m < 1000 ? Math.round(m) + " m" : dec(m / 1000) + " km"; }
+  function shortM(m) { return m >= 1000 ? dec(m / 1000) + "k" : String(m); }
+
+  function monthTotals(y, m) {
+    var prefix = y + "-" + pad(m + 1) + "-", count = 0, meters = 0;
+    for (var k in state.days) {
+      if (k.indexOf(prefix) === 0) { count++; meters += state.days[k]; }
+    }
+    return { count: count, meters: meters };
+  }
+
+  var grid = document.getElementById("grid");
+  var prev = document.getElementById("prev");
+  var next = document.getElementById("next");
+
+  function renderSummary() {
+    var t = monthTotals(viewY, viewM);
+    document.getElementById("sumMonth").textContent = "Měsíc " + MONTHS[viewM] + " " + viewY;
+    document.getElementById("sumNum").textContent = t.count;
+    document.getElementById("sumUnit").textContent = plural(t.count);
+    document.getElementById("sumDist").textContent = t.meters > 0 ? "Celkem " + fmtDist(t.meters) + " 🏊" : "";
+  }
+
+  function renderCal() {
+    document.getElementById("title").textContent = cap(MONTHS[viewM]) + " " + viewY;
+    next.disabled = (viewY === todayY && viewM === todayM);
+    grid.innerHTML = "";
+    var first = (new Date(viewY, viewM, 1).getDay() + 6) % 7;
+    var total = new Date(viewY, viewM + 1, 0).getDate();
+    for (var i = 0; i < first; i++) {
+      var b = document.createElement("span"); b.className = "blank"; grid.appendChild(b);
+    }
+    for (var d = 1; d <= total; d++) {
+      var k = keyOf(viewY, viewM, d);
+      var isToday = (viewY === todayY && viewM === todayM && d === todayD);
+      var isFuture = (viewY === todayY && viewM === todayM && d > todayD);
+      var swam = has(k), m = swam ? state.days[k] : 0;
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "day" + (swam ? " swam" : "") + (isFuture ? " future" : "") + (isToday ? " today" : "");
+      btn.disabled = isFuture;
+      btn.dataset.key = k;
+      btn.setAttribute("aria-label", d + ". " + GEN[viewM] + (swam ? ", plavala jsem" + (m ? " " + m + " metrů" : "") : ""));
+      btn.innerHTML = "<span>" + d + "</span><span class=\"sub\">" + (swam ? (m > 0 ? shortM(m) : "✓") : "") + "</span>";
+      grid.appendChild(btn);
+    }
+    renderSummary();
+  }
+
+  grid.addEventListener("click", function (e) {
+    var btn = e.target.closest(".day");
+    if (btn && !btn.disabled) openSheet(btn.dataset.key);
+  });
+  prev.addEventListener("click", function () {
+    viewM--; if (viewM < 0) { viewM = 11; viewY--; }
+    renderCal();
+  });
+  next.addEventListener("click", function () {
+    if (viewY === todayY && viewM === todayM) return;
+    viewM++; if (viewM > 11) { viewM = 0; viewY++; }
+    renderCal();
+  });
+
+  var sheet = document.getElementById("sheet");
+  var sheetM = document.getElementById("sheetM");
+  var editKey = null;
+
+  function openSheet(k) {
+    editKey = k;
+    var p = parseKey(k);
+    document.getElementById("sheetTitle").textContent = "Plavání " + p.d + ". " + GEN[p.m];
+    var exists = has(k);
+    sheetM.value = exists ? (state.days[k] || "") : (state.last || "");
+    document.getElementById("sheetDel").hidden = !exists;
+    sheet.hidden = false;
+  }
+  function closeSheet() { sheet.hidden = true; editKey = null; }
+
+  document.getElementById("chips").addEventListener("click", function (e) {
+    var b = e.target.closest("button");
+    if (b) sheetM.value = b.dataset.v;
+  });
+  document.getElementById("sheetSave").addEventListener("click", function () {
+    if (!editKey) return;
+    var v = Math.max(0, Math.round(Number(sheetM.value) || 0));
+    state.days[editKey] = v;
+    if (v > 0) state.last = v;
+    save(); closeSheet(); refresh();
+  });
+  document.getElementById("sheetDel").addEventListener("click", function () {
+    if (!editKey) return;
+    delete state.days[editKey];
+    save(); closeSheet(); refresh();
+  });
+  document.getElementById("sheetCancel").addEventListener("click", closeSheet);
+  sheet.addEventListener("click", function (e) { if (e.target === sheet) closeSheet(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !sheet.hidden) closeSheet();
+    if (e.key === "Enter" && !sheet.hidden && e.target === sheetM) document.getElementById("sheetSave").click();
+  });
+
+  function lastSixMonths() {
+    var arr = [];
+    for (var i = 5; i >= 0; i--) {
+      var d = new Date(todayY, todayM - i, 1);
+      arr.push({ y: d.getFullYear(), m: d.getMonth() });
+    }
+    return arr;
+  }
+
+  function drawChart() {
+    var months = lastSixMonths();
+    var vals = months.map(function (x) {
+      var t = monthTotals(x.y, x.m);
+      return chartMode === "dist" ? t.meters : t.count;
+    });
+    document.getElementById("chartCap").textContent =
+      chartMode === "dist" ? "Kolik kilometrů plavkyně babička uplavala za měsíc" : "Kolik dnů plavkyně babička plavala za měsíc";
+    var max = Math.max.apply(null, vals); if (max <= 0) max = 1;
+    var W = 360, base = 190, maxH = 150, slot = W / 6, bw = 42, out = "";
+    out += "<svg viewBox=\"0 0 360 224\" role=\"img\" aria-label=\"Sloupcový graf za posledních šest měsíců\">";
+    out += "<line x1=\"4\" y1=\"" + base + "\" x2=\"356\" y2=\"" + base + "\" stroke=\"#B9DCE3\" stroke-width=\"2\"/>";
+    for (var i = 0; i < 6; i++) {
+      var v = vals[i];
+      var h = v > 0 ? Math.max(5, v / max * maxH) : 0;
+      var x = i * slot + (slot - bw) / 2;
+      var cur = (i === 5);
+      if (h > 0) out += "<rect x=\"" + x + "\" y=\"" + (base - h) + "\" width=\"" + bw + "\" height=\"" + h + "\" rx=\"8\" fill=\"" + (cur ? "#0B4F63" : "#0B7A99") + "\"/>";
+      var label = chartMode === "dist" ? (v > 0 ? dec(v / 1000) : "0") : String(v);
+      out += "<text x=\"" + (i * slot + slot / 2) + "\" y=\"" + (base - h - 8) + "\" text-anchor=\"middle\" font-size=\"16\" font-weight=\"700\" fill=\"" + (v > 0 ? "#0B3C49" : "#4C6F79") + "\">" + label + "</text>";
+      out += "<text x=\"" + (i * slot + slot / 2) + "\" y=\"212\" text-anchor=\"middle\" font-size=\"16\" fill=\"#0B3C49\">" + SHORT[months[i].m] + "</text>";
+    }
+    out += "</svg>";
+    document.getElementById("chartBox").innerHTML = out;
+  }
+
+  function longestStreak(serials) {
+    if (!serials.length) return 0;
+    serials.sort(function (a, b) { return a - b; });
+    var best = 1, run = 1;
+    for (var i = 1; i < serials.length; i++) {
+      run = (serials[i] === serials[i - 1] + 1) ? run + 1 : 1;
+      if (run > best) best = run;
+    }
+    return best;
+  }
+
+  function drawStats() {
+    var months = lastSixMonths();
+    var inWin = {};
+    months.forEach(function (x) { inWin[x.y + "-" + x.m] = true; });
+    var entries = [];
+    for (var k in state.days) {
+      var p = parseKey(k);
+      if (inWin[p.y + "-" + p.m]) entries.push({ y: p.y, m: p.m, d: p.d, meters: state.days[k] });
+    }
+    var box = document.getElementById("statsBox");
+    if (!entries.length) {
+      box.innerHTML = "<p class=\"empty\">Zatím tu nic není. V kalendáři označte první plavání a objeví se tu přehled.</p>";
+      return;
+    }
+    var total = 0, withDist = 0;
+    entries.forEach(function (e) {
+      total += e.meters;
+      if (e.meters > 0) {
+        withDist++;
+      }
+    });
+    var serials = entries.map(function (e) { return Date.UTC(e.y, e.m, e.d) / 86400000; });
+    var streak = longestStreak(serials);
+
+    var bestM = null, bestV = -1;
+    months.forEach(function (x) {
+      var t = monthTotals(x.y, x.m);
+      var v = total > 0 ? t.meters : t.count;
+      if (v > bestV) { bestV = v; bestM = { x: x, t: t }; }
+    });
+
+    var sutkaLaps = total > 0 ? Math.floor(total / 50) : 0;
+
+    function card(l, v, s) {
+      return "<div class=\"stat\"><p class=\"l\">" + l + "</p><p class=\"v\">" + v + "</p>" + (s ? "<p class=\"s\">" + s + "</p>" : "") + "</div>";
+    }
+    var html = "<div class=\"stats\">";
+    html += card("Celkem uplaváno", total > 0 ? fmtDist(total) : "–", total > 0 ? "" : "bez zapsaných metrů");
+    html += card("Dnů plavání", String(entries.length), "");
+    html += card("Průměr na jedno plavání", withDist ? fmtDist(total / withDist) : "–", "");
+    html += card("Dohromady máš uplaváno", total > 0 ? sutkaLaps + " bazénů" : "–", "na Šutce");
+    html += card("Nejlepší měsíc", bestM ? cap(MONTHS[bestM.x.m]) : "–",
+      bestM ? (total > 0 ? fmtDist(bestM.t.meters) : bestM.t.count + " " + dnu(bestM.t.count)) : "");
+    html += card("Nejdelší série v řadě", streak + " " + dnu(streak), "plavání po sobě");
+    html += "</div>";
+    box.innerHTML = html;
+  }
+
+  var tabCal = document.getElementById("tabCal"), tabStats = document.getElementById("tabStats");
+  var viewCal = document.getElementById("viewCal"), viewStats = document.getElementById("viewStats");
+  function showTab(which) {
+    var isCal = which === "cal";
+    viewCal.hidden = !isCal; viewStats.hidden = isCal;
+    tabCal.setAttribute("aria-selected", isCal ? "true" : "false");
+    tabStats.setAttribute("aria-selected", isCal ? "false" : "true");
+    if (!isCal) { drawChart(); drawStats(); }
+    window.scrollTo(0, 0);
+  }
+  tabCal.addEventListener("click", function () { showTab("cal"); });
+  tabStats.addEventListener("click", function () { showTab("stats"); });
+
+  var modeDist = document.getElementById("modeDist"), modeDays = document.getElementById("modeDays");
+  function setMode(m) {
+    chartMode = m;
+    modeDist.setAttribute("aria-pressed", m === "dist" ? "true" : "false");
+    modeDays.setAttribute("aria-pressed", m === "days" ? "true" : "false");
+    drawChart();
+  }
+  modeDist.addEventListener("click", function () { setMode("dist"); });
+  modeDays.addEventListener("click", function () { setMode("days"); });
+
+  function refresh() {
+    renderCal();
+    if (!viewStats.hidden) { drawChart(); drawStats(); }
+  }
+
+  load();
+  renderCal();
+})();
+</script>
+</body>
+</html>
